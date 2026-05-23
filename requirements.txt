@@ -8,3 +8,41 @@ smartapi-python>=1.5.5
 pyotp>=2.9
 logzero>=1.7
 websocket-client>=1.7
+# ── ProTrader Terminal v7 ── requirements.txt ──────────────────────────────
+# Core framework
+streamlit>=1.36.0
+
+# Data & numerics
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualisation
+plotly>=5.20.0
+
+# HTTP
+requests>=2.31.0
+aiohttp>=3.9.0           # Block 14a async fetching
+
+# Database
+psycopg2-binary>=2.9.9
+
+# Angel One SmartAPI
+smartapi-python>=1.5.5
+pyotp>=2.9.0
+websocket-client>=1.7.0  # Block 7a WebSocket feed
+
+# PDF export (Block 13c)
+weasyprint>=60.0
+
+# Redis cache (Block 14b) — optional, falls back gracefully
+redis>=5.0.0
+
+# Logging
+logzero>=1.7.0
+
+# Anthropic (Block 6c AI Journal Review)
+anthropic>=0.28.0
+
+# Utilities
+python-dateutil>=2.8.2
+pytz>=2024.1
