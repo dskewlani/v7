@@ -1,830 +1,837 @@
 """
-ui.py — ProTrader Terminal v6 UI
-Next-level Bloomberg-grade dark professional terminal
-Enhanced:
-  ✅ Dark terminal theme (Bloomberg/Zerodha Kite dark style)
-  ✅ Live price pulse animations for auto-trading positions
-  ✅ Real-time P&L flash green/red on change
-  ✅ Daily P&L dashboard cards with progress rings
-  ✅ Enhanced candlestick-style position cards
-  ✅ Profit target progress bars within trade cards
-  ✅ Neon-glow signal badges
-  ✅ Animated live indicators / market status dots
-  ✅ Daily goal tracker widget
+ui.py — ProTrader Terminal v7 — Complete UI Layer
+=================================================
+All 14 Blocks — UI Helpers & CSS:
+  ✅ Block 4a  — Light / Dark theme CSS toggle
+  ✅ Block 4c  — Command Palette (Ctrl+K)
+  ✅ Block 4d  — Toast notification system
+  ✅ Block 5a  — Full light theme CSS variables
+  ✅ Block 5b  — Chart theme sync helper
+  ✅ Block 5c  — Compact / Comfortable density
+  ✅ Block 5d  — Custom accent color picker
+  ✅ Block 14e — Mobile-responsive layout
 """
+
+import streamlit as st
+
+
+# ─── CSS Variables & Theme ────────────────────────────────────────────────────
+
+ACCENT_PALETTES = {
+    "Blue":   {"--accent": "#3B82F6", "--accent2": "#1D4ED8", "--p": "#7C3AED", "--p3": "#EDE9FE", "--p4": "#C4B5FD"},
+    "Gold":   {"--accent": "#F59E0B", "--accent2": "#D97706", "--p": "#7C3AED", "--p3": "#FEF3C7", "--p4": "#FDE68A"},
+    "Teal":   {"--accent": "#14B8A6", "--accent2": "#0F766E", "--p": "#8B5CF6", "--p3": "#CCFBF1", "--p4": "#99F6E4"},
+    "Purple": {"--accent": "#A855F7", "--accent2": "#7E22CE", "--p": "#3B82F6", "--p3": "#F3E8FF", "--p4": "#D8B4FE"},
+    "Green":  {"--accent": "#22C55E", "--accent2": "#15803D", "--p": "#F59E0B", "--p3": "#DCFCE7", "--p4": "#BBF7D0"},
+}
+
+
+def _palette_vars(name: str) -> str:
+    pal = ACCENT_PALETTES.get(name, ACCENT_PALETTES["Blue"])
+    return "; ".join(f"{k}: {v}" for k, v in pal.items())
+
 
 TERMINAL_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+/* ── Reset & Font Imports ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
+/* ── Dark Theme (default) ─────────────────────────────────────────────── */
 :root {
-    /* ─── Bloomberg Dark Theme ─────────────────────────────── */
-    --bg:        #050A14;
-    --bg2:       #0A1220;
-    --bg3:       #0F1A2E;
-    --bg4:       #142038;
-    --surface:   #0D1829;
-    --card:      #0D1829;
-    --glass:     rgba(13,24,41,0.85);
+  --bg:      #0A0E1A;
+  --bg2:     #0F1525;
+  --bg3:     #141B2E;
+  --surface: #1A2235;
+  --surface2:#1E2840;
+  --border:  #263050;
+  --border2: #1E2840;
 
-    /* ─── Borders ──────────────────────────────────────────── */
-    --border:    rgba(255,255,255,0.07);
-    --border2:   rgba(255,255,255,0.12);
-    --border-hi: rgba(99,179,237,0.35);
+  --accent:  #3B82F6;
+  --accent2: #1D4ED8;
+  --accent3: rgba(59,130,246,0.12);
 
-    /* ─── Accent ───────────────────────────────────────────── */
-    --accent:    #3B82F6;
-    --accent2:   #60A5FA;
-    --accent-glow: rgba(59,130,246,0.35);
-    --p:         #7C3AED;
-    --p2:        #6D28D9;
-    --p3:        #8B5CF6;
-    --p4:        #A78BFA;
-    --p-light:   rgba(124,58,237,0.15);
-    --p-border:  rgba(124,58,237,0.4);
-    --p-glow:    rgba(124,58,237,0.3);
-    --p-pale:    rgba(124,58,237,0.08);
+  --green:   #22C55E;
+  --green2:  #16A34A;
+  --green3:  rgba(34,197,94,0.12);
+  --red:     #EF4444;
+  --red2:    #DC2626;
+  --red3:    rgba(239,68,68,0.12);
+  --gold:    #F59E0B;
+  --gold2:   #D97706;
+  --gold3:   rgba(245,158,11,0.12);
+  --teal:    #14B8A6;
+  --teal2:   #0F766E;
+  --teal3:   rgba(20,184,166,0.12);
+  --p:       #A855F7;
+  --p2:      #7E22CE;
+  --p3:      rgba(168,85,247,0.12);
+  --p4:      #C4B5FD;
 
-    /* ─── Semantic ─────────────────────────────────────────── */
-    --green:        #10B981;
-    --green2:       #059669;
-    --green3:       #34D399;
-    --green-bg:     rgba(16,185,129,0.1);
-    --green-border: rgba(16,185,129,0.35);
-    --green-glow:   rgba(16,185,129,0.3);
-    --red:          #EF4444;
-    --red2:         #DC2626;
-    --red3:         #F87171;
-    --red-bg:       rgba(239,68,68,0.1);
-    --red-border:   rgba(239,68,68,0.35);
-    --red-glow:     rgba(239,68,68,0.3);
-    --gold:         #F59E0B;
-    --gold2:        #D97706;
-    --gold3:        #FCD34D;
-    --gold-bg:      rgba(245,158,11,0.1);
-    --gold-border:  rgba(245,158,11,0.35);
-    --teal:         #06B6D4;
-    --teal-bg:      rgba(6,182,212,0.1);
-    --orange:       #F97316;
+  --tx:      #F0F4FF;
+  --tx2:     #A8B4CC;
+  --tx3:     #5C6B88;
+  --muted:   #3A4560;
 
-    /* ─── Text ─────────────────────────────────────────────── */
-    --tx:    #E2E8F0;
-    --tx2:   #94A3B8;
-    --tx3:   #64748B;
-    --muted: #475569;
-    --white: #FFFFFF;
+  --f-mono:  'IBM Plex Mono', 'Cascadia Code', monospace;
+  --f-head:  'Space Grotesk', 'IBM Plex Sans', sans-serif;
+  --f-ui:    'IBM Plex Sans', 'Segoe UI', sans-serif;
 
-    /* ─── Fonts ────────────────────────────────────────────── */
-    --f-ui:   'Inter', sans-serif;
-    --f-mono: 'JetBrains Mono', monospace;
-    --f-head: 'Space Grotesk', sans-serif;
+  --r:       6px;
+  --r2:      10px;
+  --r3:      14px;
 
-    /* ─── Shadows ──────────────────────────────────────────── */
-    --sh-xs:  0 1px 3px rgba(0,0,0,0.4);
-    --sh-sm:  0 2px 8px rgba(0,0,0,0.5);
-    --sh-md:  0 4px 20px rgba(0,0,0,0.6);
-    --sh-p:   0 4px 20px var(--p-glow);
-    --sh-g:   0 4px 20px var(--green-glow);
-    --sh-r:   0 4px 20px var(--red-glow);
-    --sh-a:   0 4px 20px var(--accent-glow);
+  /* density: comfortable */
+  --fs:      14px;
+  --lh:      1.6;
+  --gap:     16px;
+  --pad:     16px 20px;
 }
 
-/* ══ BASE ══════════════════════════════════════════════════════════════════════ */
-html, body, [class*="css"] {
-    font-family: var(--f-ui) !important;
-    background:  var(--bg)  !important;
-    color:       var(--tx)  !important;
-    font-size: 13.5px;
-}
-.stApp { background: var(--bg) !important; }
-* { box-sizing: border-box; }
+/* ── Light Theme ──────────────────────────────────────────────────────── */
+:root[data-theme='light'] {
+  --bg:      #F0F4F8;
+  --bg2:     #E8EDF5;
+  --bg3:     #DDEAF5;
+  --surface: #FFFFFF;
+  --surface2:#F8FAFC;
+  --border:  #CBD5E1;
+  --border2: #E2E8F0;
 
-::-webkit-scrollbar       { width:5px; height:5px; }
-::-webkit-scrollbar-track { background:var(--bg2); }
-::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
-::-webkit-scrollbar-thumb:hover { background:var(--p3); }
+  --accent3: rgba(59,130,246,0.08);
 
-/* ══ KEYFRAMES ══════════════════════════════════════════════════════════════════ */
-@keyframes pdot {
-    0%,100% { opacity:1; box-shadow:0 0 6px var(--green-glow); }
-    50%      { opacity:0.3; box-shadow:none; }
-}
-@keyframes rdot {
-    0%,100% { opacity:1; box-shadow:0 0 6px var(--red-glow); }
-    50%      { opacity:0.3; box-shadow:none; }
-}
-@keyframes pulse-green {
-    0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
-    70%  { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
-    100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
-}
-@keyframes pulse-red {
-    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
-    70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
-    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-}
-@keyframes scrolll {
-    0%   { transform:translateX(0); }
-    100% { transform:translateX(-50%); }
-}
-@keyframes shimmer {
-    0%   { background-position:-200% 0; }
-    100% { background-position:200% 0; }
-}
-@keyframes fadein { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
-@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
-@keyframes glow-pulse-g {
-    0%,100% { text-shadow: 0 0 8px rgba(16,185,129,0.6); }
-    50%      { text-shadow: 0 0 20px rgba(16,185,129,1); }
-}
-@keyframes glow-pulse-r {
-    0%,100% { text-shadow: 0 0 8px rgba(239,68,68,0.6); }
-    50%      { text-shadow: 0 0 20px rgba(239,68,68,1); }
+  --green3:  rgba(34,197,94,0.10);
+  --red3:    rgba(239,68,68,0.10);
+  --gold3:   rgba(245,158,11,0.10);
+  --teal3:   rgba(20,184,166,0.10);
+  --p3:      rgba(168,85,247,0.10);
+
+  --tx:      #1E293B;
+  --tx2:     #475569;
+  --tx3:     #94A3B8;
+  --muted:   #CBD5E1;
 }
 
-/* ══ TERMINAL HEADER ══ */
-.terminal-header {
-    background: linear-gradient(135deg, #050A14 0%, #0A1220 60%, #0D1040 100%);
-    border-bottom: 1px solid var(--border);
-    padding: 18px 28px 14px;
-    position: relative;
-    overflow: hidden;
-}
-.terminal-header::before {
-    content:'';
-    position:absolute;
-    top:0; left:0; right:0; bottom:0;
-    background: radial-gradient(ellipse at 30% 50%, rgba(124,58,237,0.06) 0%, transparent 70%),
-                radial-gradient(ellipse at 70% 50%, rgba(59,130,246,0.04) 0%, transparent 70%);
-    pointer-events:none;
-}
-.terminal-header::after {
-    content:'';
-    position:absolute;
-    bottom:0; left:0; right:0;
-    height:2px;
-    background: linear-gradient(90deg, transparent, var(--accent), var(--p3), var(--teal), transparent);
-}
-.terminal-title {
-    font-family: var(--f-head);
-    font-size: 1.55rem;
-    font-weight: 800;
-    color: var(--white);
-    line-height: 1.2;
-    letter-spacing: -0.5px;
-}
-.terminal-title span { color: var(--accent2); }
-.terminal-sub {
-    font-family: var(--f-mono);
-    font-size: 0.58rem;
-    color: var(--tx3);
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    margin-top: 4px;
-}
-.terminal-dot {
-    display: inline-block;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--green);
-    animation: pdot 2s ease-in-out infinite;
-    margin-right: 6px;
-    vertical-align: middle;
-}
-.terminal-dot.red { background: var(--red); animation: rdot 1.5s ease-in-out infinite; }
-
-/* ══ TICKER TAPE ══ */
-.ticker-outer {
-    overflow: hidden;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 7px 0;
-}
-.ticker-inner {
-    display:flex; gap:56px;
-    animation: scrolll 60s linear infinite;
-    white-space:nowrap;
-}
-.t-item { font-family:var(--f-mono); font-size:0.67rem; color:var(--tx3); display:inline-flex; gap:8px; align-items:center; }
-.t-name { color:var(--tx2); font-weight:600; letter-spacing:0.5px; }
-.t-up   { color:var(--green3); font-weight:500; }
-.t-dn   { color:var(--red3);   font-weight:500; }
-.t-flat { color:var(--gold3);  font-weight:500; }
-.t-sep  { color:var(--border2); }
-
-/* ══ INDEX CARDS ══ */
-.idx-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px 18px;
-    position: relative;
-    overflow: hidden;
-    transition: box-shadow .2s, border-color .25s, transform .15s;
-}
-.idx-card:hover {
-    border-color: var(--border2);
-    transform: translateY(-1px);
-    box-shadow: var(--sh-md);
-}
-.idx-card::before {
-    content:''; position:absolute; top:0; left:0; right:0; height:3px;
-    border-radius:14px 14px 0 0;
-}
-.idx-card.bn::before { background:linear-gradient(90deg,var(--p3),var(--accent)); }
-.idx-card.nf::before { background:linear-gradient(90deg,var(--accent),var(--teal)); }
-.idx-card.vx::before { background:linear-gradient(90deg,var(--red),var(--orange)); }
-.idx-card.sx::before { background:linear-gradient(90deg,var(--gold),var(--orange)); }
-.idx-card.it::before { background:linear-gradient(90deg,var(--teal),var(--accent)); }
-.idx-card.mid::before { background:linear-gradient(90deg,var(--green),var(--teal)); }
-.idx-label { font-size:.58rem; color:var(--muted); text-transform:uppercase; letter-spacing:2px; margin-bottom:7px; font-weight:700; font-family:var(--f-ui); }
-.idx-price { font-family:var(--f-mono); font-size:1.35rem; font-weight:600; color:var(--white); line-height:1.1; letter-spacing:-0.5px; }
-.idx-chg   { font-family:var(--f-mono); font-size:.68rem; margin-top:5px; }
-.up   { color:var(--green3) !important; }
-.dn   { color:var(--red3)   !important; }
-.flat { color:var(--gold3)  !important; }
-
-/* ══ METRIC CARDS ══ */
-.m-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px 16px;
-    text-align: center;
-    transition: box-shadow .2s, border-color .2s, transform .15s;
-    position: relative;
-    overflow: hidden;
-}
-.m-card:hover { box-shadow:var(--sh-md); border-color:var(--border2); transform:translateY(-1px); }
-.m-card::after {
-    content:''; position:absolute; bottom:0; left:20%; right:20%; height:1px;
-    background: linear-gradient(90deg, transparent, var(--border2), transparent);
-}
-.m-val { font-family:var(--f-mono); font-size:1.3rem; font-weight:700; color:var(--white); }
-.m-lbl { font-size:.58rem; color:var(--muted); text-transform:uppercase; letter-spacing:1.8px; margin-top:5px; font-weight:700; }
-
-/* ══ DAILY P&L GOAL CARD ══ */
-.daily-pnl-card {
-    background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-.daily-pnl-card::before {
-    content:''; position:absolute; top:0; left:0; right:0; height:3px;
-    background: linear-gradient(90deg, var(--green), var(--teal));
-}
-.daily-goal-ring {
-    width: 72px; height: 72px;
-    border-radius: 50%;
-    border: 4px solid var(--border2);
-    display: flex; align-items: center; justify-content: center;
-    position: relative;
-    flex-shrink: 0;
-}
-.dpnl-row { display:flex; gap:16px; align-items:center; }
-.dpnl-stats { flex:1; }
-.dpnl-stat-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border); }
-.dpnl-stat-row:last-child { border-bottom:none; }
-
-/* ══ SIGNAL BADGES (neon glow) ══ */
-.sig {
-    display:inline-block; padding:4px 12px; border-radius:20px;
-    font-family:var(--f-mono); font-size:.65rem; font-weight:700;
-    letter-spacing:.5px; text-transform:uppercase;
-    transition: box-shadow .2s;
-}
-.sig-sbuy  {
-    background:rgba(16,185,129,0.12); color:#34D399;
-    border:1px solid rgba(16,185,129,0.4);
-    box-shadow: 0 0 10px rgba(16,185,129,0.25);
-}
-.sig-buy   { background:var(--green-bg); color:var(--green3); border:1px solid var(--green-border); }
-.sig-wbuy  { background:var(--teal-bg);  color:var(--teal);   border:1px solid rgba(6,182,212,.35); }
-.sig-ssell {
-    background:rgba(239,68,68,0.12); color:#F87171;
-    border:1px solid rgba(239,68,68,0.4);
-    box-shadow: 0 0 10px rgba(239,68,68,0.25);
-}
-.sig-sell  { background:var(--red-bg);   color:var(--red3);   border:1px solid var(--red-border); }
-.sig-wsell { background:rgba(249,115,22,.1); color:var(--orange); border:1px solid rgba(249,115,22,.3); }
-.sig-neut  { background:var(--gold-bg);  color:var(--gold3);  border:1px solid var(--gold-border); }
-
-/* ══ SECTION TITLE ══ */
-.sec-ttl {
-    font-family:var(--f-ui); font-size:.6rem; font-weight:800; letter-spacing:2.5px;
-    color:var(--accent2); text-transform:uppercase;
-    border-bottom:1px solid var(--border);
-    padding-bottom:10px; margin-bottom:16px; margin-top:8px;
-    display:flex; align-items:center; gap:8px;
+/* ── Compact Density ──────────────────────────────────────────────────── */
+:root[data-density='compact'] {
+  --fs:  13px;
+  --lh:  1.45;
+  --gap: 10px;
+  --pad: 10px 14px;
 }
 
-/* ══ LIVE TRADE CARDS (enhanced) ══ */
-.tc {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px 18px;
-    margin-bottom: 8px;
-    transition: box-shadow .2s, border-color .2s;
-    position: relative;
-    overflow: hidden;
-    animation: fadein 0.3s ease;
-}
-.tc:hover { box-shadow: var(--sh-md); border-color: var(--border2); }
-.tc.win  { border-left: 3px solid var(--green); }
-.tc.loss { border-left: 3px solid var(--red); }
-.tc.open { border-left: 3px solid var(--accent); }
-.tc-live {
-    position: absolute; top: 12px; right: 14px;
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--green);
-    animation: pdot 2s ease-in-out infinite;
-}
-.tc-live.loss { background: var(--red); animation: rdot 1.5s ease-in-out infinite; }
-.tc-head { font-family:var(--f-head); font-weight:700; font-size:.92rem; color:var(--white); }
-.tc-meta { font-family:var(--f-mono); font-size:.64rem; color:var(--tx3); margin-top:3px; }
-
-/* Target progress bar inside trade card */
-.tc-progress-wrap { background:var(--bg3); border-radius:3px; height:4px; margin-top:8px; overflow:hidden; }
-.tc-progress-fill { height:4px; border-radius:3px; transition:width .6s ease; }
-.tc-progress-green { background: linear-gradient(90deg, var(--green2), var(--green3)); }
-.tc-progress-red   { background: linear-gradient(90deg, var(--red2), var(--red3)); }
-.tc-progress-warn  { background: linear-gradient(90deg, var(--gold2), var(--gold3)); }
-
-/* ══ LIVE PRICE FLASH ══ */
-.lp-flash-up {
-    color: var(--green3) !important;
-    animation: glow-pulse-g 0.8s ease;
-}
-.lp-flash-dn {
-    color: var(--red3) !important;
-    animation: glow-pulse-r 0.8s ease;
+/* ── Base Styles ──────────────────────────────────────────────────────── */
+html, body, [data-testid="stAppViewContainer"] {
+  background: var(--bg) !important;
+  color: var(--tx) !important;
+  font-family: var(--f-ui) !important;
+  font-size: var(--fs) !important;
+  line-height: var(--lh) !important;
 }
 
-/* ══ POSITION TABLE ROWS ══ */
-.pos-row {
-    background:var(--bg2); border:1px solid var(--border); border-radius:10px;
-    padding:12px 16px; margin:5px 0;
-    display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1.5fr 1fr;
-    align-items:center; gap:6px;
-    transition: background .15s, border-color .15s;
-    font-family: var(--f-mono); font-size:.75rem;
+/* Hide Streamlit chrome */
+#MainMenu, footer, [data-testid="stToolbar"],
+[data-testid="stDeployButton"], header { display: none !important; }
+
+[data-testid="stSidebar"] {
+  background: var(--bg2) !important;
+  border-right: 1px solid var(--border) !important;
 }
-.pos-row:hover { background:var(--bg3); border-color:var(--border2); }
-.pos-row.profit { border-left:3px solid var(--green); }
-.pos-row.loss   { border-left:3px solid var(--red); }
 
-/* ══ PROFIT BOOK ══ */
-.pb { background:var(--green-bg); border:1px solid var(--green-border); border-radius:10px; padding:10px 16px; margin:4px 0; display:flex; justify-content:space-between; align-items:center; }
-.pb-pct { font-family:var(--f-mono); font-size:.78rem; color:var(--green3); font-weight:700; }
-.pb-pr  { font-family:var(--f-mono); font-size:.82rem; color:var(--white); font-weight:600; }
-.pb-lbl { font-size:.64rem; color:var(--tx3); }
+/* Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-/* ══ GREEK BOXES ══ */
-.gk { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:12px 14px; text-align:center; transition:border-color .2s; }
-.gk:hover { border-color:var(--border-hi); }
-.gk-v { font-family:var(--f-mono); font-size:.95rem; font-weight:600; color:var(--white); }
-.gk-l { font-size:.56rem; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-top:3px; font-weight:700; }
-
-/* ══ S/R LEVELS ══ */
-.lvl { border-radius:8px; padding:9px 14px; font-family:var(--f-mono); font-size:.82rem; text-align:center; font-weight:600; }
-.lvl-r  { background:var(--red-bg);   border:1px solid var(--red-border);   color:var(--red3); }
-.lvl-s  { background:var(--green-bg); border:1px solid var(--green-border); color:var(--green3); }
-.lvl-e  { background:var(--p-pale);   border:1px solid var(--p-border);     color:var(--p4); }
-.lvl-tg { background:var(--teal-bg);  border:1px solid rgba(6,182,212,.3);  color:var(--teal); }
-
-/* ══ STRENGTH BAR ══ */
-.sb-wrap { background:var(--bg3); border-radius:6px; height:6px; overflow:hidden; margin-top:5px; }
-.sb-fill  { height:6px; border-radius:6px; transition:width .6s ease; }
-
-/* ══ OPTION CHAIN ══ */
-.oc-hdr {
-    display:grid;
-    grid-template-columns:1.5fr .8fr .7fr .6fr 1fr 1.2fr 1fr .6fr .7fr .8fr 1.5fr;
-    padding:10px 14px; background:var(--bg3);
-    border:1px solid var(--border); border-radius:12px 12px 0 0;
-    font-size:.58rem; text-transform:uppercase; letter-spacing:1.5px;
-    color:var(--muted); gap:4px; font-family:var(--f-ui); font-weight:700;
-}
-.oc-row {
-    display:grid;
-    grid-template-columns:1.5fr .8fr .7fr .6fr 1fr 1.2fr 1fr .6fr .7fr .8fr 1.5fr;
-    padding:8px 14px; border:1px solid var(--border); border-top:none;
-    font-size:.74rem; gap:4px; align-items:center; transition:background .12s;
-    font-family:var(--f-mono); background:var(--bg2); color:var(--tx);
-}
-.oc-row:hover       { background:var(--bg3) !important; }
-.oc-row:last-child  { border-radius:0 0 12px 12px; }
-.oc-atm { background:rgba(245,158,11,0.07) !important; border-left:3px solid var(--gold) !important; border-right:3px solid var(--gold) !important; }
-
-/* ══ JOURNAL ROW ══ */
-.jrnl-row { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:10px 16px; margin:4px 0; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; transition:box-shadow .15s, border-color .15s; }
-.jrnl-row:hover { border-color:var(--border2); box-shadow:var(--sh-sm); }
-
-/* ══ PILL TAG ══ */
-.pill       { display:inline-block; background:var(--p-pale);    border:1px solid var(--p-border);        color:var(--p4);      border-radius:20px; padding:3px 11px; font-size:.65rem; font-family:var(--f-ui); font-weight:700; }
-.pill-green { background:var(--green-bg);  border-color:var(--green-border); color:var(--green3); }
-.pill-red   { background:var(--red-bg);    border-color:var(--red-border);   color:var(--red3); }
-.pill-gold  { background:var(--gold-bg);   border-color:var(--gold-border);  color:var(--gold3); }
-.pill-teal  { background:var(--teal-bg);   border-color:rgba(6,182,212,.35); color:var(--teal); }
-
-/* ══ RANK BADGE ══ */
-.rank-badge { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; background:var(--p-pale); border:1px solid var(--p-border); border-radius:50%; font-family:var(--f-mono); font-size:.7rem; font-weight:700; color:var(--p4); }
-
-/* ══ DIVIDERS ══ */
-.divider        { height:1px; background:var(--border); margin:12px 0; }
-.divider-accent { height:1px; background:linear-gradient(90deg,transparent,var(--accent-glow),transparent); margin:14px 0; }
-
-/* ══ HIGHLIGHT BOX ══ */
-.hl-box { background:var(--p-pale); border:1px solid var(--p-border); border-radius:12px; padding:16px 20px; text-align:center; }
-.hl-val { font-family:var(--f-mono); font-size:1.45rem; font-weight:700; color:var(--p4); }
-.hl-lbl { font-size:.58rem; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-top:4px; font-weight:700; }
-
-/* ══ SCROLLABLE TABLE ══ */
-.scroll-table { max-height:420px; overflow-y:auto; border-radius:12px; border:1px solid var(--border); }
-.scroll-table::-webkit-scrollbar       { width:4px; }
-.scroll-table::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
-
-/* ══ ALERT BOXES ══ */
-.info-b    { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.3); border-radius:10px; padding:12px 16px; font-size:.8rem; color:var(--accent2); margin:6px 0; }
-.warn-b    { background:var(--gold-bg);  border:1px solid var(--gold-border);  border-radius:10px; padding:12px 16px; font-size:.8rem; color:var(--gold3);  margin:6px 0; }
-.success-b { background:var(--green-bg); border:1px solid var(--green-border); border-radius:10px; padding:12px 16px; font-size:.8rem; color:var(--green3); margin:6px 0; }
-.danger-b  { background:var(--red-bg);   border:1px solid var(--red-border);   border-radius:10px; padding:12px 16px; font-size:.8rem; color:var(--red3);   margin:6px 0; }
-
-/* ══ CHIPS ══ */
-.ce-chip  { background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,.35); color:var(--accent2); border-radius:6px; padding:3px 10px; font-size:.66rem; font-family:var(--f-mono); font-weight:700; }
-.pe-chip  { background:var(--red-bg);  border:1px solid var(--red-border);   color:var(--red3);   border-radius:6px; padding:3px 10px; font-size:.66rem; font-family:var(--f-mono); font-weight:700; }
-.atm-chip { background:var(--gold-bg); border:1px solid var(--gold-border);  color:var(--gold3);  border-radius:6px; padding:3px 10px; font-size:.66rem; font-family:var(--f-mono); font-weight:700; }
-.fut-chip { background:var(--p-pale);  border:1px solid var(--p-border);     color:var(--p4);     border-radius:6px; padding:3px 10px; font-size:.66rem; font-family:var(--f-mono); font-weight:700; }
-
-/* ══ UTILITIES ══ */
-.purple-color { color:var(--p4)     !important; }
-.green-color  { color:var(--green3) !important; }
-.red-color    { color:var(--red3)   !important; }
-.gold-color   { color:var(--gold3)  !important; }
-.muted-color  { color:var(--muted)  !important; }
-.accent-color { color:var(--accent2)!important; }
-.ce-color     { color:var(--accent2)!important; }
-.pe-color     { color:var(--red3)   !important; }
-.pnl-pos  { color:var(--green3); font-family:var(--f-mono); font-weight:700; }
-.pnl-neg  { color:var(--red3);   font-family:var(--f-mono); font-weight:700; }
-.pnl-zero { color:var(--gold3);  font-family:var(--f-mono); font-weight:700; }
-
-/* ══ BUTTONS ══ */
-.stButton > button {
-    background: linear-gradient(135deg, var(--p), var(--p3)) !important;
-    color: var(--white) !important;
-    font-family: var(--f-ui) !important;
-    font-weight: 700 !important;
-    font-size: .83rem !important;
-    letter-spacing: .2px !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: 10px 22px !important;
-    transition: all .2s !important;
-    box-shadow: 0 2px 10px var(--p-glow) !important;
-}
-.stButton > button:hover  { background: linear-gradient(135deg, var(--p2), var(--p)) !important; box-shadow: 0 4px 18px var(--p-glow) !important; transform:translateY(-1px); }
-.stButton > button:active { transform:translateY(0); }
-
-/* ══ TABS ══ */
+/* Streamlit elements */
+[data-testid="stVerticalBlock"] > div { gap: 0 !important; }
 .stTabs [data-baseweb="tab-list"] {
-    background: var(--bg2) !important;
-    border-bottom: 1px solid var(--border) !important;
-    gap: 2px !important;
-    padding: 0 4px !important;
+  background: var(--bg2) !important;
+  border-bottom: 1px solid var(--border) !important;
+  gap: 2px;
 }
 .stTabs [data-baseweb="tab"] {
-    font-family:var(--f-ui) !important; font-size:.8rem !important;
-    font-weight:600 !important; color:var(--tx3) !important;
-    padding:10px 18px !important; background:transparent !important;
-    transition: color .15s !important;
+  background: transparent !important;
+  color: var(--tx3) !important;
+  border-radius: var(--r) var(--r) 0 0 !important;
+  font-family: var(--f-ui) !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  border: none !important;
 }
 .stTabs [aria-selected="true"] {
-    color:var(--accent2) !important;
-    border-bottom:2px solid var(--accent) !important;
-    background:rgba(59,130,246,0.06) !important;
-    border-radius:6px 6px 0 0 !important;
+  background: var(--bg) !important;
+  color: var(--accent) !important;
+  border-bottom: 2px solid var(--accent) !important;
+}
+.stTabs [data-testid="stTabsContent"] {
+  background: var(--bg) !important;
+  border: none !important;
+  padding: 0 !important;
 }
 
-/* ══ DATAFRAME ══ */
-.stDataFrame { border:1px solid var(--border) !important; border-radius:12px !important; overflow:hidden !important; }
-.stDataFrame thead th { background:var(--bg3) !important; color:var(--tx3) !important; font-family:var(--f-ui) !important; font-size:.63rem !important; text-transform:uppercase !important; letter-spacing:1px !important; font-weight:700 !important; border-bottom:1px solid var(--border) !important; }
-.stDataFrame tbody td { font-family:var(--f-mono) !important; font-size:.76rem !important; color:var(--tx) !important; border-bottom:1px solid var(--border) !important; background:var(--bg2) !important; }
-.stDataFrame tbody tr:hover td { background:var(--bg3) !important; }
-
-/* ══ SIDEBAR ══ */
-[data-testid="stSidebar"] { background:var(--bg2) !important; border-right:1px solid var(--border) !important; }
-[data-testid="stSidebar"] label { color:var(--tx2) !important; font-family:var(--f-ui) !important; font-size:.79rem !important; font-weight:600 !important; }
-[data-testid="stSidebar"] .stSelectbox > div > div { background:var(--bg3) !important; border-color:var(--border) !important; color:var(--tx) !important; border-radius:8px !important; }
-
-/* ══ INPUTS ══ */
-.stSelectbox > div > div,
-.stTextInput > div > div > input,
-.stNumberInput > div > div > input {
-    background:var(--bg3) !important; border:1px solid var(--border) !important;
-    border-radius:8px !important; color:var(--tx) !important;
-    font-family:var(--f-mono) !important; font-size:.83rem !important;
+/* Buttons */
+.stButton > button {
+  background: var(--accent3) !important;
+  color: var(--accent) !important;
+  border: 1px solid var(--accent) !important;
+  border-radius: var(--r) !important;
+  font-family: var(--f-ui) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 6px 16px !important;
+  transition: all .15s ease !important;
 }
-.stSelectbox > div > div:focus-within,
-.stTextInput > div > div > input:focus,
-.stNumberInput > div > div > input:focus {
-    border-color:var(--accent) !important;
-    box-shadow:0 0 0 3px rgba(59,130,246,0.12) !important; outline:none !important;
+.stButton > button:hover {
+  background: var(--accent) !important;
+  color: #fff !important;
 }
-.stCheckbox label, .stRadio label { color:var(--tx2) !important; font-family:var(--f-ui) !important; font-size:.8rem !important; font-weight:500 !important; }
-.stProgress > div > div { background: linear-gradient(90deg, var(--accent), var(--p3)) !important; border-radius:4px !important; }
-.stSlider [data-baseweb="slider"] div[role="slider"] { background:var(--accent) !important; }
 
-/* ══ EXPANDER ══ */
-.streamlit-expanderHeader { background:var(--bg2) !important; border:1px solid var(--border) !important; border-radius:10px !important; font-family:var(--f-ui) !important; font-size:.8rem !important; color:var(--tx) !important; font-weight:600 !important; }
-.streamlit-expanderHeader:hover { border-color:var(--border-hi) !important; }
-.streamlit-expanderContent { background:var(--bg2) !important; border:1px solid var(--border) !important; border-top:none !important; border-radius:0 0 10px 10px !important; }
-
-/* ══ INFO/WARN ══ */
-.stAlert { border-radius:10px !important; border:none !important; }
-
-/* ══ LIVE POSITION CARD (auto-trading) ══ */
-.live-pos-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px 18px;
-    margin-bottom: 8px;
-    position: relative;
-    overflow: hidden;
-    animation: fadein 0.3s ease;
+/* Inputs, selectboxes */
+input, textarea, select,
+[data-baseweb="input"] input,
+[data-baseweb="select"] > div {
+  background: var(--surface) !important;
+  color: var(--tx) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r) !important;
+  font-family: var(--f-ui) !important;
+  font-size: var(--fs) !important;
 }
-.live-pos-card.profit { border-left: 3px solid var(--green); background: linear-gradient(135deg, var(--bg2) 0%, rgba(16,185,129,0.04) 100%); }
-.live-pos-card.loss   { border-left: 3px solid var(--red);   background: linear-gradient(135deg, var(--bg2) 0%, rgba(239,68,68,0.04) 100%); }
-.live-pos-card.break  { border-left: 3px solid var(--accent); }
-.live-badge { position:absolute; top:10px; right:12px; display:flex; align-items:center; gap:5px; font-size:.58rem; color:var(--muted); font-family:var(--f-mono); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
-.live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation: pdot 1.5s ease-in-out infinite; }
-
-/* ══ DAILY STATS BANNER ══ */
-.daily-banner {
-    background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px 20px;
-    display: flex; gap: 24px; align-items: center; flex-wrap: wrap;
-    margin-bottom: 12px;
+input:focus, textarea:focus {
+  border-color: var(--accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--accent3) !important;
 }
-.daily-stat { text-align: center; flex: 1; min-width: 80px; }
-.daily-stat-val { font-family:var(--f-mono); font-size:1.1rem; font-weight:700; color:var(--white); }
-.daily-stat-lbl { font-size:.56rem; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-top:3px; font-weight:700; }
-.daily-sep { width:1px; background:var(--border); align-self:stretch; }
 
-/* ══ GOAL PROGRESS BAR ══ */
-.goal-wrap { background:var(--bg3); border-radius:8px; height:8px; overflow:hidden; position:relative; }
-.goal-fill { height:8px; border-radius:8px; transition:width .8s ease; }
-.goal-fill.on-track  { background:linear-gradient(90deg, var(--green2), var(--green3)); }
-.goal-fill.behind    { background:linear-gradient(90deg, var(--red2), var(--red3)); }
-.goal-fill.exceeded  { background:linear-gradient(90deg, var(--gold2), var(--gold3)); }
+/* Metrics */
+[data-testid="stMetric"] {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r2) !important;
+  padding: 12px 16px !important;
+}
+[data-testid="stMetric"] label { color: var(--tx3) !important; font-size: 12px !important; }
+[data-testid="stMetricValue"] { color: var(--tx) !important; font-size: 22px !important; font-family: var(--f-head) !important; }
+[data-testid="stMetricDelta"] svg { display: none !important; }
 
-/* ══ SPARKLINE CHART ══ */
-.itm-ce { background:rgba(59,130,246,0.07); }
-.itm-pe { background:rgba(239,68,68,0.07); }
+/* Expanders */
+[data-testid="stExpander"] {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r2) !important;
+}
+
+/* DataFrame */
+[data-testid="stDataFrame"] { background: var(--surface) !important; border-radius: var(--r2) !important; }
+
+/* Sliders */
+[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
+  background: var(--accent) !important;
+}
+
+/* ── Cards & Surfaces ─────────────────────────────────────────────────── */
+.pt-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: var(--pad);
+  transition: border-color .15s;
+}
+.pt-card:hover { border-color: var(--border); }
+
+.pt-card-accent {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--r2);
+  padding: var(--pad);
+}
+
+.pt-card-green  { border-left: 3px solid var(--green) !important; }
+.pt-card-red    { border-left: 3px solid var(--red)   !important; }
+.pt-card-gold   { border-left: 3px solid var(--gold)  !important; }
+.pt-card-purple { border-left: 3px solid var(--p)     !important; }
+
+/* ── Typography ───────────────────────────────────────────────────────── */
+.pt-h1 { font-family: var(--f-head); font-size: 22px; font-weight: 700; color: var(--tx); margin: 0 0 4px; letter-spacing: -.3px; }
+.pt-h2 { font-family: var(--f-head); font-size: 17px; font-weight: 600; color: var(--tx); margin: 0 0 2px; }
+.pt-h3 { font-family: var(--f-head); font-size: 14px; font-weight: 600; color: var(--tx2); margin: 0; text-transform: uppercase; letter-spacing: .6px; }
+.pt-mono { font-family: var(--f-mono); font-size: 13px; }
+.pt-label { font-size: 11px; color: var(--tx3); text-transform: uppercase; letter-spacing: .8px; }
+
+/* ── Badges ───────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; letter-spacing: .4px;
+  font-family: var(--f-mono);
+}
+.badge-buy    { background: var(--green3); color: var(--green); border: 1px solid var(--green2); }
+.badge-sell   { background: var(--red3);   color: var(--red);   border: 1px solid var(--red2); }
+.badge-neutral{ background: var(--bg3);    color: var(--tx3);   border: 1px solid var(--border); }
+.badge-gold   { background: var(--gold3);  color: var(--gold);  border: 1px solid var(--gold2); }
+.badge-teal   { background: var(--teal3);  color: var(--teal);  border: 1px solid var(--teal2); }
+.badge-purple { background: var(--p3);     color: var(--p);     border: 1px solid var(--p2); }
+.badge-be     { background: var(--teal3);  color: var(--teal);  border: 1px solid var(--teal); font-size: 10px; }
+
+/* ── Strength Bar ─────────────────────────────────────────────────────── */
+.strength-wrap { display: flex; align-items: center; gap: 6px; }
+.strength-bar  { flex: 1; height: 4px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+.strength-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
+
+/* ── Ticker Bar ───────────────────────────────────────────────────────── */
+.ticker-bar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 20px;
+  display: flex; gap: 28px; overflow-x: auto;
+  white-space: nowrap; scrollbar-width: none;
+}
+.ticker-bar::-webkit-scrollbar { display: none; }
+.ticker-item { display: flex; flex-direction: column; align-items: center; }
+.ticker-sym  { font-size: 10px; color: var(--tx3); font-family: var(--f-mono); }
+.ticker-val  { font-size: 13px; font-weight: 600; font-family: var(--f-mono); }
+.ticker-chg  { font-size: 10px; }
+
+/* ── Position Card ────────────────────────────────────────────────────── */
+.pos-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  position: relative;
+  transition: border-color .15s;
+}
+.pos-card:hover { border-color: var(--accent); }
+.pos-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.pos-card-sym  { font-family: var(--f-head); font-size: 16px; font-weight: 700; color: var(--tx); }
+.pos-card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.pos-card-stat { display: flex; flex-direction: column; }
+.pos-card-stat .lbl { font-size: 10px; color: var(--tx3); margin-bottom: 1px; }
+.pos-card-stat .val { font-size: 13px; font-family: var(--f-mono); font-weight: 500; color: var(--tx); }
+
+/* ── Banner / Goal Bar ────────────────────────────────────────────────── */
+.banner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 24px;
+  flex-wrap: wrap;
+}
+.goal-bar { flex: 1; min-width: 180px; }
+.goal-track { height: 6px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+.goal-fill  { height: 100%; background: var(--green); border-radius: 99px; transition: width .6s ease; }
+
+/* ── Scanners ─────────────────────────────────────────────────────────── */
+.scan-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-radius: var(--r); cursor: pointer;
+  border-bottom: 1px solid var(--border2);
+  transition: background .1s;
+}
+.scan-row:hover { background: var(--surface); }
+.scan-row:last-child { border-bottom: none; }
+
+/* ── Options Chain ────────────────────────────────────────────────────── */
+.chain-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--f-mono); }
+.chain-table th { background: var(--bg2); color: var(--tx3); font-size: 10px; letter-spacing: .6px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.chain-table td { padding: 5px 8px; border-bottom: 1px solid var(--border2); color: var(--tx2); }
+.chain-table tr.atm td { background: var(--accent3) !important; color: var(--tx) !important; font-weight: 600; }
+.chain-table tr:hover td { background: var(--surface); }
+
+/* ── Command Palette ──────────────────────────────────────────────────── */
+#pt-palette-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(6px);
+  z-index: 9999; align-items: flex-start; justify-content: center;
+  padding-top: 15vh;
+}
+#pt-palette-overlay.open { display: flex; }
+#pt-palette {
+  width: min(600px, 90vw);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r3); overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,.5);
+}
+#pt-palette-input {
+  width: 100%; padding: 14px 18px;
+  background: transparent; border: none; border-bottom: 1px solid var(--border);
+  color: var(--tx); font-size: 16px; font-family: var(--f-ui);
+  outline: none;
+}
+#pt-palette-results { max-height: 340px; overflow-y: auto; }
+.pt-pal-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px; cursor: pointer; font-size: 14px; color: var(--tx2);
+}
+.pt-pal-item:hover, .pt-pal-item.active { background: var(--accent3); color: var(--tx); }
+.pt-pal-item .ico { font-size: 16px; width: 22px; }
+
+/* ── Toast Notifications ─────────────────────────────────────────────── */
+#pt-toast-stack {
+  position: fixed; top: 20px; right: 20px;
+  z-index: 10000; display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.pt-toast {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 12px 16px;
+  font-size: 13px; color: var(--tx);
+  box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  pointer-events: all; min-width: 260px; max-width: 360px;
+  animation: toastIn .25s ease;
+}
+.pt-toast.buy  { border-left: 3px solid var(--green); }
+.pt-toast.sell { border-left: 3px solid var(--red); }
+.pt-toast.warn { border-left: 3px solid var(--gold); }
+.pt-toast.info { border-left: 3px solid var(--accent); }
+@keyframes toastIn { from { opacity:0; transform: translateX(30px); } to { opacity:1; transform:none; } }
+@keyframes toastOut { to { opacity:0; transform: translateX(30px); } }
+
+/* ── Heatmap Calendar ─────────────────────────────────────────────────── */
+.cal-grid { display: flex; gap: 3px; }
+.cal-day  {
+  width: 12px; height: 12px; border-radius: 2px;
+  background: var(--bg3); cursor: pointer;
+  transition: transform .1s;
+}
+.cal-day:hover { transform: scale(1.4); }
+
+/* ── Mobile Responsive ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root { --fs: 13px; --pad: 10px 12px; }
+  .pos-card-grid { grid-template-columns: repeat(2, 1fr); }
+  .ticker-bar { gap: 16px; }
+  .banner { flex-direction: column; gap: 12px; }
+  .stButton > button { min-height: 44px !important; }  /* touch targets */
+  [data-testid="stSidebar"] { display: none; }
+}
+
+/* ── Dividers ─────────────────────────────────────────────────────────── */
+.pt-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* ── Blinking dot ─────────────────────────────────────────────────────── */
+@keyframes blink { 50% { opacity: 0; } }
+.blink { animation: blink 1.2s step-start infinite; }
 </style>
 """
 
 
-# ─── Helper Rendering Functions ───────────────────────────────────────────────
-
-def sig_badge(rec):
-    cls = {
-        "STRONG BUY":  "sig-sbuy",
-        "BUY":         "sig-buy",
-        "WEAK BUY":    "sig-wbuy",
-        "STRONG SELL": "sig-ssell",
-        "SELL":        "sig-sell",
-        "WEAK SELL":   "sig-wsell",
-        "NEUTRAL":     "sig-neut",
-        "AVOID":       "sig-ssell",
-    }.get(rec, "sig-neut")
-    return f'<span class="sig {cls}">{rec}</span>'
-
-
-def strength_bar(pct, color=None):
-    if color is None:
-        if pct >= 80:   color = "var(--green3)"
-        elif pct >= 65: color = "var(--accent2)"
-        elif pct >= 50: color = "var(--p3)"
-        else:           color = "var(--gold3)"
-    return (f'<div class="sb-wrap">'
-            f'<div class="sb-fill" style="width:{pct}%;background:{color};"></div>'
-            f'</div>')
+def inject_css(theme: str = "dark", density: str = "comfortable", palette: str = "Blue") -> None:
+    """Inject full CSS + set theme/density/palette attributes via JS."""
+    pal_vars = _palette_vars(palette)
+    js = f"""
+    <script>
+    (function(){{
+      var r = document.documentElement;
+      r.setAttribute('data-theme', '{theme}');
+      r.setAttribute('data-density', '{density}');
+      // Apply palette overrides
+      var vars = `{pal_vars}`.split(';');
+      vars.forEach(function(v){{
+        var parts = v.split(':');
+        if(parts.length===2) r.style.setProperty(parts[0].trim(), parts[1].trim());
+      }});
+    }})();
+    </script>
+    """
+    st.markdown(TERMINAL_CSS + js, unsafe_allow_html=True)
 
 
-def pnl_fmt(val):
-    if val > 0:   return f'<span class="pnl-pos">▲ ₹{val:,.2f}</span>'
-    elif val < 0: return f'<span class="pnl-neg">▼ ₹{abs(val):,.2f}</span>'
-    return f'<span class="pnl-zero">₹0.00</span>'
+def inject_command_palette(symbols: list = None, tabs: list = None) -> None:
+    """Block 4c: Inject JS-based Ctrl+K command palette."""
+    sym_list = symbols or []
+    tab_list = tabs or ["Equity", "Options", "Futures", "ETF", "MCX", "Auto-Trade", "Analytics", "Journal"]
+
+    items_json = str([
+        *[{"icon": "📈", "label": s, "action": f"symbol:{s}"} for s in sym_list[:30]],
+        *[{"icon": "🗂️", "label": t, "action": f"tab:{t}"}   for t in tab_list],
+        {"icon": "🌓", "label": "Toggle Theme",     "action": "theme"},
+        {"icon": "🔍", "label": "Scan All",          "action": "scan"},
+        {"icon": "📊", "label": "Analytics",         "action": "tab:Analytics"},
+        {"icon": "📓", "label": "Journal",           "action": "tab:Journal"},
+    ]).replace("'", '"').replace("True", "true").replace("False", "false")
+
+    html = f"""
+    <div id="pt-palette-overlay">
+      <div id="pt-palette">
+        <input id="pt-palette-input" placeholder="Search symbols, tabs, actions..." autocomplete="off"/>
+        <div id="pt-palette-results"></div>
+        <div style="padding:8px 18px;font-size:11px;color:var(--tx3);border-top:1px solid var(--border)">
+          ↑↓ navigate &nbsp;·&nbsp; Enter select &nbsp;·&nbsp; Esc close
+        </div>
+      </div>
+    </div>
+    <div id="pt-toast-stack"></div>
+
+    <script>
+    (function(){{
+      var ITEMS = {items_json};
+      var overlay = document.getElementById('pt-palette-overlay');
+      var input   = document.getElementById('pt-palette-input');
+      var results = document.getElementById('pt-palette-results');
+      var active  = 0;
+
+      function render(q){{
+        var filtered = q ? ITEMS.filter(i => i.label.toLowerCase().includes(q.toLowerCase())) : ITEMS;
+        results.innerHTML = filtered.slice(0,12).map(function(i,idx){{
+          return '<div class="pt-pal-item'+(idx===0?' active':'')+'" data-action="'+i.action+'">'
+               + '<span class="ico">'+i.icon+'</span>'+i.label+'</div>';
+        }}).join('');
+        active = 0;
+        attachClicks();
+      }}
+
+      function attachClicks(){{
+        var items = results.querySelectorAll('.pt-pal-item');
+        items.forEach(function(el){{
+          el.addEventListener('click', function(){{ execAction(el.dataset.action); }});
+        }});
+      }}
+
+      function execAction(action){{
+        overlay.classList.remove('open');
+        if(action.startsWith('symbol:')){{
+          window.ptShowSymbol && window.ptShowSymbol(action.slice(7));
+        }} else if(action === 'theme'){{
+          var r = document.documentElement;
+          var t = r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          r.setAttribute('data-theme', t);
+        }} else {{
+          showToast('Navigating to ' + action.replace('tab:',''), 'info');
+        }}
+      }}
+
+      document.addEventListener('keydown', function(e){{
+        if((e.ctrlKey || e.metaKey) && e.key === 'k'){{
+          e.preventDefault();
+          overlay.classList.toggle('open');
+          if(overlay.classList.contains('open')){{ input.value=''; render(''); input.focus(); }}
+        }}
+        if(overlay.classList.contains('open')){{
+          var items = results.querySelectorAll('.pt-pal-item');
+          if(e.key==='ArrowDown'){{ active=Math.min(active+1,items.length-1); }}
+          if(e.key==='ArrowUp'){{ active=Math.max(active-1,0); }}
+          if(e.key==='Escape'){{ overlay.classList.remove('open'); }}
+          if(e.key==='Enter' && items[active]){{ execAction(items[active].dataset.action); }}
+          items.forEach(function(el,i){{ el.classList.toggle('active', i===active); }});
+        }}
+      }});
+
+      overlay.addEventListener('click', function(e){{ if(e.target===overlay) overlay.classList.remove('open'); }});
+      input.addEventListener('input', function(){{ render(input.value); active=0; }});
+      render('');
+
+      /* ── Toast system ───────────────────────────────────────────── */
+      window.showToast = function(msg, type, dur){{
+        type = type || 'info'; dur = dur || 4000;
+        var icons = {{ buy:'✅', sell:'🔴', warn:'⚠️', info:'ℹ️' }};
+        var stack = document.getElementById('pt-toast-stack');
+        var t = document.createElement('div');
+        t.className = 'pt-toast ' + type;
+        t.innerHTML = '<span>'+icons[type]+'</span><span>'+msg+'</span>';
+        stack.appendChild(t);
+        setTimeout(function(){{
+          t.style.animation = 'toastOut .3s ease forwards';
+          setTimeout(function(){{ t.remove(); }}, 300);
+        }}, dur);
+      }};
+    }})();
+    </script>
+    """
+    st.markdown(html, unsafe_allow_html=True)
 
 
-def pnl_fmt_large(val):
-    """Bigger P&L display for summary cards."""
-    if val > 0:
-        return f'<span style="color:var(--green3);font-family:var(--f-mono);font-size:1.3rem;font-weight:700;">▲ ₹{val:,.0f}</span>'
-    elif val < 0:
-        return f'<span style="color:var(--red3);font-family:var(--f-mono);font-size:1.3rem;font-weight:700;">▼ ₹{abs(val):,.0f}</span>'
-    return f'<span style="color:var(--gold3);font-family:var(--f-mono);font-size:1.3rem;font-weight:700;">₹0</span>'
+def show_toast_js(message: str, toast_type: str = "info") -> None:
+    """Trigger a toast notification from Python side."""
+    st.markdown(
+        f'<script>window.showToast && window.showToast({repr(message)}, "{toast_type}");</script>',
+        unsafe_allow_html=True,
+    )
 
 
-def ticker_item(name, price, pct):
-    cls   = "t-up" if pct >= 0 else "t-dn"
-    arrow = "▲" if pct >= 0 else "▼"
-    return (f'<span class="t-item">'
-            f'<span class="t-name">{name}</span>'
-            f'<span class="{cls}">{price:,.2f} {arrow}{abs(pct):.2f}%</span>'
-            f'</span>')
+# ─── Colour helpers ───────────────────────────────────────────────────────────
+
+def pnl_color(pnl: float) -> str:
+    return "var(--green)" if pnl >= 0 else "var(--red)"
 
 
-def metric_card(val, lbl, color="var(--accent2)"):
-    return (f'<div class="m-card">'
-            f'<div class="m-val" style="color:{color};">{val}</div>'
-            f'<div class="m-lbl">{lbl}</div>'
-            f'</div>')
+def pnl_fmt(pnl: float, show_pct: float = None) -> str:
+    sign = "+" if pnl >= 0 else ""
+    base = f"₹{sign}{pnl:,.0f}"
+    if show_pct is not None:
+        sp = "+" if show_pct >= 0 else ""
+        base += f" ({sp}{show_pct:.2f}%)"
+    return base
 
 
-def metric_card_trend(val, lbl, color, delta=None, delta_label=""):
-    """Metric card with optional up/down delta indicator."""
+def sig_badge(rec: str) -> str:
+    rec_u = rec.upper()
+    if "STRONG BUY"  in rec_u: cls, lbl = "buy",    "⬆ STRONG BUY"
+    elif "BUY"       in rec_u: cls, lbl = "buy",    "▲ BUY"
+    elif "STRONG SEL" in rec_u: cls, lbl = "sell",  "⬇ STRONG SELL"
+    elif "SELL"      in rec_u: cls, lbl = "sell",   "▼ SELL"
+    elif "WEAK"      in rec_u: cls, lbl = "gold",   "~ WEAK"
+    else:                       cls, lbl = "neutral","● NEUTRAL"
+    return f'<span class="badge badge-{cls}">{lbl}</span>'
+
+
+def strength_bar(strength: int, rec: str = "") -> str:
+    color = "var(--green)" if "BUY" in rec.upper() else ("var(--red)" if "SELL" in rec.upper() else "var(--tx3)")
+    return f"""
+    <div class="strength-wrap">
+      <div class="strength-bar">
+        <div class="strength-fill" style="width:{strength}%;background:{color}"></div>
+      </div>
+      <span style="font-size:11px;font-family:var(--f-mono);color:{color};min-width:32px">{strength}%</span>
+    </div>"""
+
+
+# ─── Component helpers ────────────────────────────────────────────────────────
+
+def metric_card(label: str, value: str, delta: str = "", color: str = "var(--tx)",
+                icon: str = "", suffix: str = "") -> str:
     delta_html = ""
-    if delta is not None:
-        dc = "var(--green3)" if delta >= 0 else "var(--red3)"
-        da = "▲" if delta >= 0 else "▼"
-        delta_html = f'<div style="font-size:.6rem;color:{dc};margin-top:3px;font-family:var(--f-mono);">{da} {abs(delta):.1f}% {delta_label}</div>'
-    return (f'<div class="m-card">'
-            f'<div class="m-val" style="color:{color};">{val}</div>'
-            f'<div class="m-lbl">{lbl}</div>'
-            f'{delta_html}'
-            f'</div>')
+    if delta:
+        d_color = "var(--green)" if "+" in delta else ("var(--red)" if "-" in delta else "var(--tx3)")
+        delta_html = f'<span style="font-size:12px;color:{d_color};margin-left:6px">{delta}</span>'
+    return f"""
+    <div class="pt-card" style="text-align:center">
+      <div class="pt-label">{icon} {label}</div>
+      <div style="font-size:22px;font-weight:700;font-family:var(--f-head);color:{color};margin-top:4px">
+        {value}{suffix}{delta_html}
+      </div>
+    </div>"""
 
 
-def level_box(label, val, css_class):
-    return (f'<div class="lvl {css_class}">'
-            f'<div style="font-size:.55rem;opacity:.6;margin-bottom:3px;letter-spacing:1px;">{label}</div>'
-            f'₹{val:,.2f}'
-            f'</div>')
-
-
-def profit_book_row(pct, price, label, profit_abs):
-    return (f'<div class="pb">'
-            f'<span class="pb-pct">+{pct}%</span>'
-            f'<span class="pb-pr">₹{price:.2f}</span>'
-            f'<span class="pb-lbl">{label}</span>'
-            f'<span style="font-family:var(--f-mono);font-size:.78rem;'
-            f'color:var(--green3);font-weight:700;">+₹{profit_abs:.0f}</span>'
-            f'</div>')
-
-
-def greek_box(val, label, color="var(--tx)"):
-    return (f'<div class="gk">'
-            f'<div class="gk-v" style="color:{color}">{val}</div>'
-            f'<div class="gk-l">{label}</div>'
-            f'</div>')
-
-
-def pill(text, variant="purple"):
-    cls = {
-        "purple": "pill",
-        "green":  "pill pill-green",
-        "red":    "pill pill-red",
-        "gold":   "pill pill-gold",
-        "teal":   "pill pill-teal",
-    }.get(variant, "pill")
-    return f'<span class="{cls}">{text}</span>'
-
-
-def rank_badge(n):
-    return f'<span class="rank-badge">#{n}</span>'
-
-
-def hl_box(val, lbl, color="var(--p4)"):
-    return (f'<div class="hl-box">'
-            f'<div class="hl-val" style="color:{color};">{val}</div>'
-            f'<div class="hl-lbl">{lbl}</div>'
-            f'</div>')
-
-
-def live_position_card(pos, trade_type="equity"):
-    """
-    Render a Bloomberg-style live position card with:
-    - Live dot animation
-    - Target progress bar
-    - P&L with color coding
-    - Entry → CMP → Target flow
-    """
-    pnl   = pos.get("pnl", 0)
-    entry = pos.get("entry", 0)
-    cmp   = pos.get("cmp", entry)
-    target= pos.get("target", entry)
-    sl    = pos.get("sl", entry)
-    typ   = pos.get("type", "BUY")
-    sym   = pos.get("symbol", "").replace(".NS","").replace(".BO","")
-
-    # Progress toward target
-    if typ in ("BUY", "LONG", "CE"):
-        progress_range = abs(target - entry)
-        progress_done  = max(0, cmp - entry)
-    else:
-        progress_range = abs(entry - target)
-        progress_done  = max(0, entry - cmp)
-
-    prog_pct = min(100, (progress_done / progress_range * 100)) if progress_range > 0 else 0
-    prog_cls = "tc-progress-green" if pnl >= 0 else "tc-progress-red"
-    card_cls = "profit" if pnl >= 0 else ("loss" if pnl < 0 else "break")
-    pnl_cls  = "pnl-pos" if pnl >= 0 else "pnl-neg"
-    pnl_sym  = "▲" if pnl >= 0 else "▼"
-    trail    = f" | Trail: ₹{pos['trailing_sl']:.2f}" if pos.get("trailing_sl") else ""
-    pct_move = (cmp - entry) / entry * 100 if entry > 0 else 0
+def live_position_card(pos: dict, lp: float | None = None) -> str:
+    """Render a rich position card with P&L, SL, targets, badges."""
+    sym     = pos.get("symbol", "N/A")
+    typ     = pos.get("type",   "BUY")
+    entry   = pos.get("entry",  0)
+    target  = pos.get("target", 0)
+    sl_     = pos.get("sl",     0)
+    qty     = pos.get("qty",    pos.get("lots", 1))
+    pnl     = pos.get("pnl",   0.0)
+    stren   = pos.get("strength", 0)
+    rec     = pos.get("rec",   "NEUTRAL")
+    be_badge = pos.get("be_badge", "")
+    cmp     = lp or pos.get("cmp", entry)
+    trail   = pos.get("trailing_sl")
+    t1      = pos.get("target_1", target)
+    t2      = pos.get("target_2", target)
+    pnl_col = pnl_color(pnl)
+    typ_col = "var(--green)" if typ in ("BUY","CE","LONG") else "var(--red)"
+    be_html = f'<span class="badge badge-be">{be_badge}</span>' if be_badge else ""
+    trail_html = (f'<div class="pos-card-stat"><span class="lbl">Trail SL</span>'
+                  f'<span class="val" style="color:var(--gold)">₹{trail:,.2f}</span></div>') if trail else ""
 
     return f"""
-    <div class="live-pos-card {card_cls}">
-      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-start;">
-        <div>
-          <div class="tc-head">{typ} {sym}</div>
-          <div class="tc-meta">Entry ₹{entry:.2f} → CMP ₹{cmp:.2f} → Target ₹{target:.2f}
-            | SL ₹{sl:.2f}{trail}</div>
-          <div class="tc-meta" style="margin-top:3px;">
-            Move: <span style="color:{'var(--green3)' if pct_move>=0 else 'var(--red3)'};">{pct_move:+.2f}%</span>
-            | Qty: {pos.get('qty', pos.get('lots', 1))}
-          </div>
+    <div class="pos-card">
+      <div class="pos-card-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="pos-card-sym">{sym}</span>
+          <span style="font-size:11px;font-weight:700;color:{typ_col}">{typ}</span>
+          {sig_badge(rec)} {be_html}
         </div>
-        <div style="text-align:right;">
-          <div class="{pnl_cls}" style="font-size:1.1rem;">{pnl_sym} ₹{abs(pnl):,.2f}</div>
-          <div style="font-size:.62rem;color:var(--muted);margin-top:2px;">Net P&amp;L</div>
+        <div style="font-size:18px;font-weight:700;font-family:var(--f-mono);color:{pnl_col}">
+          {pnl_fmt(pnl)}
         </div>
       </div>
-      <div class="tc-progress-wrap" style="margin-top:10px;">
-        <div class="tc-progress-fill {prog_cls}" style="width:{prog_pct:.1f}%;"></div>
+      {strength_bar(stren, rec)}
+      <div class="pos-card-grid" style="margin-top:10px">
+        <div class="pos-card-stat"><span class="lbl">Entry</span><span class="val">₹{entry:,.2f}</span></div>
+        <div class="pos-card-stat"><span class="lbl">CMP</span><span class="val" style="color:{typ_col}">₹{cmp:,.2f}</span></div>
+        <div class="pos-card-stat"><span class="lbl">Target T1</span><span class="val" style="color:var(--green)">₹{t1:,.2f}</span></div>
+        <div class="pos-card-stat"><span class="lbl">Target T2</span><span class="val" style="color:var(--green)">₹{t2:,.2f}</span></div>
+        <div class="pos-card-stat"><span class="lbl">Stop Loss</span><span class="val" style="color:var(--red)">₹{sl_:,.2f}</span></div>
+        <div class="pos-card-stat"><span class="lbl">Qty</span><span class="val">{qty}</span></div>
+        {trail_html}
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:.58rem;color:var(--muted);margin-top:3px;">
-        <span>Entry</span>
-        <span style="color:{'var(--green3)' if prog_pct>50 else 'var(--gold3)'};">{prog_pct:.0f}% to target</span>
-        <span>Target</span>
-      </div>
-    </div>
-    """
+    </div>"""
 
 
-def daily_pnl_banner(realized_pnl, unrealized_pnl, trades_today, win_rate,
-                     daily_goal=5000, trades_closed=0):
-    """
-    Bloomberg-style daily P&L summary banner with goal tracker.
-    """
-    total_pnl = realized_pnl + unrealized_pnl
-    goal_pct  = min(100, max(0, total_pnl / daily_goal * 100)) if daily_goal > 0 else 0
-    goal_cls  = "exceeded" if total_pnl >= daily_goal else ("on-track" if total_pnl > 0 else "behind")
-    pnl_col   = "var(--green3)" if total_pnl >= 0 else "var(--red3)"
-    rpnl_col  = "var(--green3)" if realized_pnl >= 0 else "var(--red3)"
-    upnl_col  = "var(--green3)" if unrealized_pnl >= 0 else "var(--red3)"
-    wr_col    = "var(--green3)" if win_rate >= 55 else ("var(--gold3)" if win_rate >= 45 else "var(--red3)")
+def daily_pnl_banner(stats: dict) -> str:
+    """Render daily P&L banner with goal progress bar."""
+    total    = stats.get("total", 0)
+    realized = stats.get("realized", 0)
+    unreal   = stats.get("unrealized", 0)
+    goal     = stats.get("daily_goal", 5000)
+    goal_pct = min(150, stats.get("goal_pct", 0))
+    wr       = stats.get("win_rate", 0)
+    trades   = stats.get("trades_today", 0)
+    t_open   = stats.get("trades_open", 0)
+    var95    = stats.get("var_95", 0)
+    t_color  = pnl_color(total)
+    bar_color = "var(--green)" if total >= 0 else "var(--red)"
+    bar_w     = min(100, abs(goal_pct))
 
     return f"""
-    <div class="daily-pnl-card" style="margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
-        <div>
-          <div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:6px;">Today's Performance</div>
-          <div style="font-family:var(--f-mono);font-size:1.8rem;font-weight:700;color:{pnl_col};line-height:1;">
-            {'▲' if total_pnl>=0 else '▼'} ₹{abs(total_pnl):,.0f}
-          </div>
-          <div style="font-size:.68rem;color:var(--tx3);margin-top:4px;">
-            Realized: <span style="color:{rpnl_col};font-family:var(--f-mono);">₹{realized_pnl:+,.0f}</span> &nbsp;
-            Open: <span style="color:{upnl_col};font-family:var(--f-mono);">₹{unrealized_pnl:+,.0f}</span>
-          </div>
+    <div class="banner">
+      <div style="display:flex;flex-direction:column;min-width:120px">
+        <span class="pt-label">Total P&amp;L</span>
+        <span style="font-size:26px;font-weight:700;font-family:var(--f-head);color:{t_color}">{pnl_fmt(total)}</span>
+        <span style="font-size:11px;color:var(--tx3)">
+          Realized: {pnl_fmt(realized)} &nbsp;|&nbsp; Open: {pnl_fmt(unreal)}
+        </span>
+      </div>
+      <div class="goal-bar">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span class="pt-label">Daily Goal ₹{goal:,.0f}</span>
+          <span style="font-size:12px;color:{bar_color};font-weight:600">{goal_pct:.0f}%</span>
         </div>
-        <div style="display:flex;gap:24px;align-items:center;">
-          <div class="daily-stat">
-            <div class="daily-stat-val" style="color:var(--accent2);">{trades_today}</div>
-            <div class="daily-stat-lbl">Trades</div>
-          </div>
-          <div class="daily-sep"></div>
-          <div class="daily-stat">
-            <div class="daily-stat-val" style="color:{wr_col};">{win_rate:.0f}%</div>
-            <div class="daily-stat-lbl">Win Rate</div>
-          </div>
-          <div class="daily-sep"></div>
-          <div class="daily-stat">
-            <div class="daily-stat-val" style="color:var(--gold3);">{trades_closed}</div>
-            <div class="daily-stat-lbl">Closed</div>
-          </div>
+        <div class="goal-track">
+          <div class="goal-fill" style="width:{bar_w}%;background:{bar_color}"></div>
         </div>
       </div>
-      <div style="margin-top:14px;">
-        <div style="display:flex;justify-content:space-between;font-size:.62rem;color:var(--muted);margin-bottom:5px;">
-          <span>Daily Goal Progress</span>
-          <span style="color:{'var(--green3)' if goal_pct>=100 else 'var(--gold3)'};">
-            ₹{total_pnl:+,.0f} / ₹{daily_goal:,.0f} ({goal_pct:.0f}%)
-          </span>
-        </div>
-        <div class="goal-wrap">
-          <div class="goal-fill {goal_cls}" style="width:{goal_pct:.1f}%;"></div>
-        </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div><span class="pt-label">Win Rate</span><br>
+          <span style="font-size:16px;font-weight:600;color:var(--green)">{wr:.0f}%</span></div>
+        <div><span class="pt-label">Trades</span><br>
+          <span style="font-size:16px;font-weight:600">{trades} closed · {t_open} open</span></div>
+        <div><span class="pt-label">VaR 95%</span><br>
+          <span style="font-size:16px;font-weight:600;color:var(--red)">₹{var95:,.0f}</span></div>
       </div>
-    </div>
-    """
+    </div>"""
+
+
+def ticker_bar(indices: dict) -> str:
+    """Render top market indices ticker bar."""
+    names = {"NF": "NIFTY", "BN": "BANK NF", "VIX": "VIX", "SX": "SENSEX", "IT": "IT", "MID": "MIDCAP"}
+    items = []
+    for key, label in names.items():
+        d = indices.get(key, {})
+        p   = d.get("p", 0)
+        pct = d.get("pct", 0)
+        col = "var(--green)" if pct >= 0 else "var(--red)"
+        arr = "▲" if pct >= 0 else "▼"
+        items.append(f"""
+        <div class="ticker-item">
+          <span class="ticker-sym">{label}</span>
+          <span class="ticker-val">{p:,.2f}</span>
+          <span class="ticker-chg" style="color:{col}">{arr} {abs(pct):.2f}%</span>
+        </div>""")
+    return f'<div class="ticker-bar">{"".join(items)}</div>'
+
+
+def regime_badge(regime: str) -> str:
+    mapping = {
+        "TRENDING": ("badge-buy",    "📈 TRENDING"),
+        "SIDEWAYS": ("badge-neutral","↔ SIDEWAYS"),
+        "VOLATILE": ("badge-sell",   "⚡ VOLATILE"),
+        "NEUTRAL":  ("badge-gold",   "● NEUTRAL"),
+    }
+    cls, lbl = mapping.get(regime, ("badge-neutral", regime))
+    return f'<span class="badge {cls}">{lbl}</span>'
+
+
+def time_filter_badge(valid: bool, msg: str) -> str:
+    cls = "badge-buy" if valid else "badge-gold"
+    return f'<span class="badge {cls}">{msg}</span>'
+
+
+def section_header(title: str, subtitle: str = "", icon: str = "") -> str:
+    sub = f'<div style="font-size:12px;color:var(--tx3);margin-top:2px">{subtitle}</div>' if subtitle else ""
+    return f"""
+    <div style="margin: 18px 0 12px">
+      <div class="pt-h2">{icon} {title}</div>
+      {sub}
+    </div>"""
+
+
+def get_chart_theme(theme: str = None) -> dict:
+    """Block 5b: Return Plotly theme dict for current mode."""
+    t = theme or st.session_state.get("theme", "dark")
+    if t == "light":
+        return {
+            "paper_bgcolor": "#FFFFFF",
+            "plot_bgcolor":  "#F8FAFC",
+            "font_color":    "#1E293B",
+            "grid_color":    "#E2E8F0",
+            "border_color":  "#CBD5E1",
+        }
+    return {
+        "paper_bgcolor": "#0F1525",
+        "plot_bgcolor":  "#0A0E1A",
+        "font_color":    "#A8B4CC",
+        "grid_color":    "#1E2840",
+        "border_color":  "#263050",
+    }
+
+
+def accent_color_picker() -> None:
+    """Block 5d: Render palette selector buttons."""
+    st.markdown('<div class="pt-label" style="margin-bottom:8px">Accent Palette</div>', unsafe_allow_html=True)
+    cols = st.columns(len(ACCENT_PALETTES))
+    for i, (name, pal) in enumerate(ACCENT_PALETTES.items()):
+        with cols[i]:
+            if st.button(name, key=f"pal_{name}"):
+                st.session_state["palette"] = name
+                import storage as db
+                db.save("ui_palette", name)
+                st.rerun()
+    # Apply selected
+    current = st.session_state.get("palette", "Blue")
+    pal_vars = _palette_vars(current)
+    st.markdown(
+        f"<script>var r=document.documentElement;`{pal_vars}`.split(';').forEach(function(v){{"
+        "var p=v.split(':');if(p.length===2)r.style.setProperty(p[0].trim(),p[1].trim());}});</script>",
+        unsafe_allow_html=True,
+    )
+
+
+def density_toggle() -> None:
+    """Block 5c: Density toggle."""
+    density = st.session_state.get("density", "comfortable")
+    label = "⬛ Compact" if density == "comfortable" else "⬜ Comfortable"
+    if st.button(label, key="density_toggle"):
+        new = "compact" if density == "comfortable" else "comfortable"
+        st.session_state["density"] = new
+        import storage as db
+        db.save("ui_density", new)
+        st.markdown(
+            f"<script>document.documentElement.setAttribute('data-density','{new}');</script>",
+            unsafe_allow_html=True,
+        )
+
+
+def theme_toggle_button() -> None:
+    """Block 4a: Light/Dark theme toggle button."""
+    current = st.session_state.get("theme", "dark")
+    icon = "☀️" if current == "dark" else "🌙"
+    if st.button(f"{icon}", key="theme_toggle", help="Toggle light/dark theme"):
+        new = "light" if current == "dark" else "dark"
+        st.session_state["theme"] = new
+        import storage as db
+        db.save("ui_theme", new)
+        st.markdown(
+            f"<script>document.documentElement.setAttribute('data-theme','{new}');</script>",
+            unsafe_allow_html=True,
+        )
+        st.rerun()
+
+
+def sidebar_watchlist(symbols: list, prices: dict) -> None:
+    """Block 4b: Collapsible sidebar watchlist with live prices."""
+    st.sidebar.markdown(section_header("📌 Watchlist"), unsafe_allow_html=True)
+    for sym in symbols[:20]:
+        d = prices.get(sym, {})
+        p   = d.get("p",   0)
+        pct = d.get("pct", 0)
+        col = "var(--green)" if pct >= 0 else "var(--red)"
+        arr = "▲" if pct >= 0 else "▼"
+        short = sym.replace(".NS","").replace(".BO","")
+        st.sidebar.markdown(
+            f"""<div style="display:flex;justify-content:space-between;padding:4px 0;
+            border-bottom:1px solid var(--border2);cursor:pointer">
+              <span style="font-size:13px;font-weight:600">{short}</span>
+              <div style="text-align:right">
+                <div style="font-size:13px;font-family:var(--f-mono)">₹{p:,.2f}</div>
+                <div style="font-size:11px;color:{col}">{arr}{abs(pct):.2f}%</div>
+              </div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
