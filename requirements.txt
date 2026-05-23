@@ -1,0 +1,10 @@
+streamlit>=1.36
+pandas>=2.0
+numpy>=1.24
+plotly>=5.20
+requests>=2.31
+psycopg2-binary>=2.9
+smartapi-python>=1.5.5
+pyotp>=2.9
+logzero>=1.7
+websocket-client>=1.7
