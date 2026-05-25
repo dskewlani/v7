@@ -46,3 +46,14 @@ anthropic>=0.28.0
 # Utilities
 python-dateutil>=2.8.2
 pytz>=2024.1
+streamlit>=1.32.0
+yfinance>=0.2.38
+pandas>=2.0.0
+numpy>=1.26.0
+plotly>=5.20.0
+requests>=2.31.0
+ta>=0.11.0
+streamlit-autorefresh>=1.0.1
+psycopg2-binary
+
+nsepython>=2.0.0
